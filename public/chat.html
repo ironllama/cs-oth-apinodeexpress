@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Chat</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-family: sans-serif;
+            color: cornflowerblue;
+            font-size: 2em;
+        }
+
+        #log {
+            height: 80%;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="log">
+        <!-- <div class='chatHistory'>Name: Message</div> -->
+    </div>
+    <input type="text" name="who" id="who">
+    <input type="text" name="what" id="what">
+    <input type="button" value=">">
+    <script>
+        // Stuff to be used later in the code. Convenient to get the references up front.
+        var myFormElem = document.querySelector("input[type='button']");
+        var logElem = document.querySelector("#log");
+
+        var nameElem = document.querySelector("#who");
+        var messageElem = document.querySelector("#what");
+        var sendElem = document.querySelector("input[type='button']");
+
+        // Input validation.
+        sendElem.addEventListener("click", function () { validateInput(); });
+        messageElem.addEventListener("keyup", function (evt) {
+            if (evt.keyCode === 13) validateInput();
+        });
+
+        function validateInput() {
+            messageElem.style.background = "none";
+            if (messageElem.value === "") {
+                alert("Please make sure you've filled out a message!");
+                messageElem.style.background = "pink";
+                messageElem.focus();
+
+                return;
+            }
+
+            getStuffFromBackend(nameElem.value, messageElem.value);  // Send along the new message.
+
+            messageElem.value = "";  // Blank out the message input.
+        }
+
+        // Call function every 5 seconds.
+        setInterval(function () { getStuffFromBackend(); }, 5000);
+
+        // Use AJAX to get data from backend.
+        function getStuffFromBackend(inWho, inWhat) {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    // console.log("COMING BACK!:", xhr.responseText);
+
+                    // Empty the current backlog of messages.
+                    logElem.innerHTML = "";
+
+                    if (xhr.responseText !== "") {
+
+                        // Handle Urlecoded response text.
+                        // ====================================
+                        // var allMessages = xhr.responseText.split("|");
+                        // for (var i = 0; i < allMessages.length; i++) {
+                        //     var allPairsObj = {};
+                        //     var allPairs = allMessages[i].split("&");
+                        //     for (var j = 0; j < allPairs.length; j++) {
+                        //         var keyValuePair = allPairs[j].split("=");
+                        //         var key = keyValuePair[0];
+                        //         var value = keyValuePair[1];
+                        //         allPairsObj[key] = value;
+                        //     }
+                        //     // console.log("OBJ:", allPairsObj);
+
+                        //     // Create new messages.
+                        //     var newHtml = "<div class='chatHistory'>" + allPairsObj.name + ": " + allPairsObj['message'] + "</div>";
+
+                        //     // Add the new messages to the log.
+                        //     logElem.innerHTML += newHtml;
+
+                        //     // Scroll to the bottom of the log div.
+                        //     logElem.scrollTo(0, logElem.scrollHeight);
+                        // }
+
+
+                        // Handle JSON response text.
+                        // ====================================
+                        var jsonObj = JSON.parse(xhr.responseText);
+                        if (jsonObj !== null) {
+                            var newHtml = "";
+                            for (var i = 0; i < jsonObj.length; i++) {
+                                var thisMessage = jsonObj[i];
+
+                                // console.log("OBJECT:", thisMessage);
+
+                                // Create new messages.
+                                newHtml += "<div class='chatHistory'>" + thisMessage.name + ": " + thisMessage['message'] + "</div>";
+                            }
+
+                            // Add the new messages to the log.
+                            logElem.innerHTML += newHtml;
+
+                            // Scroll to the bottom of the log div.
+                            logElem.scrollTo(0, logElem.scrollHeight);
+                        }
+                    }
+                }
+            }
+            xhr.open("POST", "/chat");
+
+            var params = null;
+            if (typeof inWho !== "undefined" && inWho !== null
+                && typeof inWhat !== "undefined" && inWhat !== null
+            ) {
+                // Using Urlencoded data.
+                // params = "who=" + inWho + "&what=" + inWhat;
+
+                // //Send the proper header information along with the request
+                // xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+                // Using literal arrays / objects.
+                var paramsObj = { who: inWho, what: inWhat };
+
+                params = JSON.stringify(paramsObj);
+            }
+
+            xhr.send(params);
+        }
+
+        getStuffFromBackend();
+    </script>
+</body>
+
+</html>
